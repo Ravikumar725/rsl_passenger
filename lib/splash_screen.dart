@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:rsl_passenger/widget/styles/colors.dart';
 import 'assets/assets.dart';
-import 'safe_area_container.dart';
+import 'widget/utils/safe_area_container.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});

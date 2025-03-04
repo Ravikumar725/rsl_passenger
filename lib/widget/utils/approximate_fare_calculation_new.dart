@@ -1,6 +1,6 @@
 import '../../network/services.dart';
 import '../../taxi/data/nearest_drivers_list_api_data.dart';
-import '../controller/taxi_controller_new.dart';
+import '../../taxi/controller/taxi_controller_new.dart';
 
 double doubleWithTwoDigits(double value) =>
     double.parse(value.toStringAsFixed(2));

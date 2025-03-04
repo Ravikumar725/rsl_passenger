@@ -1,7 +1,5 @@
-import 'package:get/get_utils/src/platform/platform.dart';
-
 import 'app_info_args.dart';
-import 'get_core_api_data.dart';
+import '../../dashboard/data/get_core_api_data.dart';
 
 
 enum BaseUrls {

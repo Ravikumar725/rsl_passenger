@@ -9,7 +9,7 @@ import 'package:google_maps_webservice/places.dart';
 import 'package:rsl_passenger/dashboard/controller/dashboard_page_controller.dart';
 import 'package:rsl_passenger/routes/routes.dart';
 
-import '../app_info.dart';
+import '../widget/utils/app_info.dart';
 import '../network/services.dart';
 import 'common_place_controller.dart';
 

@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../assets/assets.dart';
 import '../../network/services.dart';
-import '../../safe_area_container.dart';
+import '../../widget/utils/safe_area_container.dart';
 import '../../widget/styles/app_style.dart';
 import '../../widget/styles/colors.dart';
 import '../controller/city_selection_controller.dart';
@@ -13,7 +13,7 @@ import '../data/known_location_list_api_data.dart';
 import '../widget/back_button.dart';
 import '../widget/custom_app_bar.dart';
 import '../widget/now_booking_widget.dart';
-import '../widget/text_field.dart';
+import '../../widget/utils/text_field.dart';
 
 class CitySelectionPage extends GetView<CitySelectionController> {
   const CitySelectionPage({super.key});

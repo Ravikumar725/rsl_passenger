@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
 
-import '../../widget/styles/colors.dart';
+import '../widget/styles/colors.dart';
 
 class LocationListShimmer extends StatelessWidget {
   const LocationListShimmer({super.key,});

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:get/get_instance/src/get_instance.dart';
 import 'package:rsl_passenger/network/services.dart';
 
-import '../app_info.dart';
-import '../get_core_api_data.dart';
+import '../widget/utils/app_info.dart';
+import '../dashboard/data/get_core_api_data.dart';
 import '../taxi/data/Known_location_pickup_list_api_date.dart';
 import '../taxi/data/city_selection_list_api_data.dart';
 import '../taxi/data/known_location_list_api_data.dart';

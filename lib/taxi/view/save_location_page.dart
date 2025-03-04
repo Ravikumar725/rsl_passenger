@@ -3,15 +3,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../../safe_area_container.dart';
+import '../../widget/utils/safe_area_container.dart';
 import '../../widget/custom_button.dart';
 import '../../widget/styles/app_style.dart';
 import '../../widget/styles/colors.dart';
+import '../../widget/utils/map_style.dart';
 import '../controller/saved_location_controller.dart';
 import '../widget/back_button.dart';
 import '../widget/custom_app_bar.dart';
-import '../widget/map_style.dart';
-import '../widget/text_field.dart';
+import '../../widget/utils/text_field.dart';
 
 class SaveLocationPage extends GetView<SaveLocationController> {
   const SaveLocationPage({super.key});

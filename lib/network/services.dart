@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 
-import '../app_info.dart';
+import '../widget/utils/app_info.dart';
 import '../dashboard/getx_storage.dart';
 
 class ApiProvider extends GetConnect {

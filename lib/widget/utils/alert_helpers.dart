@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
-import '../../widget/app_loader.dart';
-import '../../widget/custom_button.dart';
-import '../../widget/styles/app_style.dart';
-import '../../widget/styles/colors.dart';
+import '../app_loader.dart';
+import '../custom_button.dart';
+import '../styles/app_style.dart';
+import '../styles/colors.dart';
 
 showAppDialog({
   required String message,

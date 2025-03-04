@@ -9,22 +9,22 @@ import '../../../../controller/common_place_controller.dart';
 import '../../../../controller/place_search_page_controller.dart';
 import '../../../../network/services.dart';
 import '../../../../routes/routes.dart';
-import '../../../../safe_area_container.dart';
+import '../../../../widget/utils/safe_area_container.dart';
 import '../../../../widget/custom_button.dart';
 import '../../../../widget/styles/app_style.dart';
 import '../../../../widget/styles/colors.dart';
+import '../../../../widget/utils/map_style.dart';
 import '../../../controller/saved_location_controller.dart';
 import '../../../data/known_location_list_api_data.dart';
-import '../../../widget/alert_helpers.dart';
+import '../../../../widget/utils/alert_helpers.dart';
 import '../../../widget/back_button.dart';
 import '../../../widget/current_location_button_widget.dart';
 import '../../../widget/custom_map_marker.dart';
 import '../../../widget/destination_suggestions_list_widget.dart';
-import '../../../widget/map_style.dart';
 import '../../../widget/now_booking_widget.dart';
-import '../../../widget/taxi_location_list_shimmer.dart';
+import '../../../../shimmer_layout/taxi_location_list_shimmer.dart';
 import '../../../widget/taxi_timer_widget.dart';
-import '../../../widget/text_field.dart';
+import '../../../../widget/utils/text_field.dart';
 import '../../../controller/destination_controller.dart';
 
 class DestinationPage extends GetView<DestinationController> {

@@ -12,7 +12,7 @@ import '../../dashboard/controller/dashboard_page_controller.dart';
 import '../../network/app_services.dart';
 import '../../network/services.dart';
 import '../data/save_location_api_data.dart';
-import '../widget/api_response_handler.dart';
+import '../../widget/utils/api_response_handler.dart';
 import 'city_selection_controller.dart';
 
 class DestinationController extends GetxController {

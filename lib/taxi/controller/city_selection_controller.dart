@@ -3,13 +3,13 @@ import 'package:get/get.dart';
 
 import '../../controller/common_place_controller.dart';
 import '../../dashboard/getx_storage.dart';
-import '../../data.dart';
+import '../../dashboard/data/data.dart';
 import '../../network/app_services.dart';
 import '../../network/services.dart';
 import '../data/Known_location_pickup_list_api_date.dart';
 import '../data/city_selection_list_api_data.dart';
 import '../data/known_location_list_api_data.dart';
-import '../widget/api_response_handler.dart';
+import '../../widget/utils/api_response_handler.dart';
 
 class CitySelectionController extends GetxController
     with GetTickerProviderStateMixin {
