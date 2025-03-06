@@ -51,16 +51,7 @@ class DestinationPage extends GetView<DestinationController> {
                     controller.isMapDragged.value = false;
                     controller
                         .placeSearchController.destinationController.text = '';
-                    controller.commonPlaceController.dropLocation.value = '';
-                    controller.commonPlaceController.dropLatLng.value =
-                        const LatLng(0.0, 0.0);
-                    controller
-                        .commonPlaceController.laterBookingDateTime.value = "";
-                    if (Get.isRegistered<DestinationController>()) {
-                      Get.delete<DestinationController>(force: true);
-                    }
-                    Get.offNamedUntil('/dashboardPage', (route) => false);
-                    // Get.toNamed(AppRoutes.dashboardPage);
+                    Get.offAllNamed(AppRoutes.dashboardPage);
                   } else {
                     Get.back();
                     controller.isDropEdit.value = false;
@@ -295,13 +286,13 @@ class DestinationPage extends GetView<DestinationController> {
                 downOnTab: controller.onDropDownOnTab,
               ),
               _searchBar(),
-              Obx(() => _tabsWidgetApiStatus(
+              Obx(() => _knownLocationApiStatus(
                     status: controller.citySelectionController
                         .knownLocationsResponseStatus.value.status,
                     msg: controller.citySelectionController
                         .knownLocationsResponseStatus.value.message,
                   )),
-              Obx(() => _tabBarViewApiStatus(
+              Obx(() => _knownLocationListApiStatus(
                     scrollController: scrollController,
                     status: controller.citySelectionController
                         .knownLocationsResponseStatus.value.status,
@@ -316,12 +307,12 @@ class DestinationPage extends GetView<DestinationController> {
     });
   }
 
-  Widget _tabsWidgetApiStatus({int? status, String? msg}) {
+  Widget _knownLocationApiStatus({int? status, String? msg}) {
     switch (status) {
       case 0:
         return const LocationListShimmer();
       case 1:
-        return _tabsWidget();
+        return _knownLocationTabsWidget();
       case -1:
         return ValueListenableBuilder<TextEditingValue>(
             valueListenable:
@@ -426,13 +417,13 @@ class DestinationPage extends GetView<DestinationController> {
     }
   }
 
-  Widget _tabBarViewApiStatus(
+  Widget _knownLocationListApiStatus(
       {int? status, String? msg, required ScrollController scrollController}) {
     switch (status) {
       case 0:
         return const LocationListShimmer();
       case 1:
-        return _tabBarViewContent(scrollController);
+        return _knownLocationListView(scrollController);
 
       case -1:
         return const SizedBox.shrink();
@@ -731,7 +722,7 @@ class DestinationPage extends GetView<DestinationController> {
     );
   }
 
-  Widget _tabsWidget() {
+  Widget _knownLocationTabsWidget() {
     return ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller.placeSearchController.destinationController,
         builder: (context, value, child) {
@@ -786,7 +777,7 @@ class DestinationPage extends GetView<DestinationController> {
         });
   }
 
-  Widget _tabBarViewContent(ScrollController scrollController) {
+  Widget _knownLocationListView(ScrollController scrollController) {
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller.placeSearchController.destinationController,
       builder: (context, value, child) {
@@ -802,7 +793,7 @@ class DestinationPage extends GetView<DestinationController> {
                     (index) {
                       final category =
                           controller.citySelectionController.categories?[index];
-                      return _airportTabContent(
+                      return _knownLocationLists(
                           scrollController, category ?? Categories());
                     },
                   ),
@@ -1008,88 +999,6 @@ class DestinationPage extends GetView<DestinationController> {
     }
   }
 
-  Widget _nowBookingWidget({Function()? onTab}) {
-    return InkWell(
-      onTap: onTab,
-      child: Padding(
-        padding: EdgeInsets.only(right: 12.w),
-        child: Obx(
-          () {
-            if (controller.laterBookingDateTime.isNotEmpty) {
-              String formattedDate =
-                  formatDateString(controller.laterBookingDateTime);
-
-              return controller.isLaterBooking
-                  ? Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_month_outlined,
-                          size: 20.r,
-                          color: AppColor.kPrimaryColor.value,
-                        ),
-                        Padding(
-                          padding: EdgeInsets.only(left: 4.w, right: 2.w),
-                          child: textView(
-                              text: formattedDate,
-                              color: AppColor.kPrimaryIconColor.value,
-                              fontSize: AppFontSize.medium.value,
-                              fontWeight: AppFontWeight.semibold.value),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_month_outlined,
-                          size: 20.r,
-                          color: AppColor.kPrimaryColor.value,
-                        ),
-                        Padding(
-                          padding: EdgeInsets.only(left: 4.w, right: 2.w),
-                          child: textView(
-                              text: "Now".tr,
-                              color: AppColor.kPrimaryIconColor.value,
-                              fontSize: AppFontSize.medium.value,
-                              fontWeight: AppFontWeight.semibold.value),
-                        ),
-                        Icon(
-                          Icons.keyboard_arrow_down_outlined,
-                          size: 20.r,
-                          color: AppColor.kPrimaryTextColor.value,
-                        ),
-                      ],
-                    );
-            } else {
-              // Handle the case where the date is empty
-              return Row(
-                children: [
-                  Icon(
-                    Icons.calendar_month_outlined,
-                    size: 20.r,
-                    color: AppColor.kPrimaryColor.value,
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 4.w, right: 2.w),
-                    child: textView(
-                        text: "Now".tr,
-                        color: AppColor.kPrimaryIconColor.value,
-                        fontSize: AppFontSize.medium.value,
-                        fontWeight: AppFontWeight.semibold.value),
-                  ),
-                  Icon(
-                    Icons.keyboard_arrow_down_outlined,
-                    size: 20.r,
-                    color: AppColor.kPrimaryTextColor.value,
-                  ),
-                ],
-              );
-            }
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _line() {
     return Center(
       child: Container(
@@ -1111,7 +1020,7 @@ class DestinationPage extends GetView<DestinationController> {
         color: AppColor.kPrimaryTextColor.value);
   }
 
-  Widget _airportTabContent(
+  Widget _knownLocationLists(
       ScrollController scrollController, Categories categories) {
     final saveLocationController = Get.find<SaveLocationController>();
 
@@ -1287,12 +1196,7 @@ class DestinationPage extends GetView<DestinationController> {
     if (controller.isDropEdit.value == false) {
       controller.isMapDragged.value = false;
       controller.placeSearchController.destinationController.text = '';
-      controller.commonPlaceController.dropLocation.value = '';
-      controller.commonPlaceController.dropLatLng.value =
-          const LatLng(0.0, 0.0);
-      controller.commonPlaceController.laterBookingDateTime.value = "";
-      // Get.delete<DestinationController>();
-      Get.offNamed(AppRoutes.dashboardPage);
+      Get.offAllNamed(AppRoutes.dashboardPage);
     } else {
       Get.back();
       controller.isDropEdit.value = false;
