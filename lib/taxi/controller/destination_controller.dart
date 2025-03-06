@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rsl_passenger/routes/routes.dart';
 import 'package:rsl_passenger/taxi/controller/saved_location_controller.dart';
+import 'package:rsl_passenger/widget/utils/global_utils.dart';
 import '../../controller/common_place_controller.dart';
 import '../../controller/place_search_page_controller.dart';
 import '../../dashboard/controller/dashboard_page_controller.dart';
@@ -21,7 +22,7 @@ class DestinationController extends GetxController {
   final placeSearchController = Get.find<PlaceSearchPageController>();
   final saveLocationController = Get.put(SaveLocationController());
   final citySelectionController = Get.put(CitySelectionController());
-  final dashboardController = Get.find<DashBoardController>();
+  final dashboardController = Get.put(DashBoardController());
 
   var draggableSheetHeight = 0.5.obs;
   var isMapDragged = false.obs;
@@ -263,61 +264,13 @@ class DestinationController extends GetxController {
     }
   }
 
-  /*callSaveLocationApi(
-      {String? sId = "", bool? isFavorites = false, String? name}) {
-    saveLocationLoader.value = true;
-    saveLocationResponseStatus.value.status = 0;
-    saveLocationResponseStatus.refresh();
-    saveLocationApi(SaveLocationRequestData(
-      sId: sId,
-      passengerId:
-          int.tryParse(dashboardController.userInfo.value?.rslId ?? ""),
-      placeType: 4,
-      placeTypeName: "Others",
-      requestType: 2,
-      houseNo: "",
-      landmark: "",
-      latitude: 0.0,
-      longitude: 0.0,
-      name: name,
-      address: "",
-      isFavorites: isFavorites,
-    )).then((value) {
-      if (value.status == 1) {
-        saveLocationLoader.value = false;
-        saveLocationResponseStatus.value.status = value.status;
-        saveLocationResponseStatus.value.message = value.message;
-        saveLocationResponseStatus.refresh();
-        citySelectionController.getUserInfo();
-        Get.back();
-      } else {
-        saveLocationLoader.value = false;
-        saveLocationResponseStatus.value.status = value.status;
-        saveLocationResponseStatus.value.message = value.message;
-        saveLocationResponseStatus.refresh();
-        Get.back();
-        printLogs("Hii countryCityList api error ${value.message}");
-      }
-    }).onError((error, stackTrace) {
-      printLogs(
-          "Hii countryCityList api error catch : $error ** ${stackTrace.toString()}");
-      saveLocationLoader.value = false;
-      Get.back();
-      saveLocationResponseStatus.value.status = 400;
-      saveLocationResponseStatus.value.message = "something_went_wrong".tr;
-      saveLocationResponseStatus.refresh();
-    });
-  }*/
-
   void setTarget({required LatLng getTarget}) {
     target.value = getTarget;
     target.refresh();
     getAddressFromLatLng(target.value);
-    // onCameraIdle();
   }
 
   initialCameraPosition() {
-    // getAddressFromLatLng(commonPlaceController.dropLatLng.value);
     return CameraPosition(
       target: commonPlaceController.dropLatLng.value,
       zoom: 15,
@@ -360,8 +313,7 @@ class DestinationController extends GetxController {
     saveLocationResponseStatus.refresh();
     saveLocationApi(SaveLocationRequestData(
       sId: sId,
-      passengerId:
-          9 /*int.tryParse(dashboardController.userInfo.value?.rslId ?? "")*/,
+      passengerId: int.tryParse(GlobalUtils.rslID),
       placeType: 4,
       placeTypeName: "Others",
       requestType: 2,

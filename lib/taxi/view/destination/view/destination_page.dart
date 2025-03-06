@@ -5,10 +5,10 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../../assets/assets.dart';
-import '../../../../controller/common_place_controller.dart';
 import '../../../../controller/place_search_page_controller.dart';
 import '../../../../network/services.dart';
 import '../../../../routes/routes.dart';
+import '../../../../widget/utils/enums.dart';
 import '../../../../widget/utils/safe_area_container.dart';
 import '../../../../widget/custom_button.dart';
 import '../../../../widget/styles/app_style.dart';
@@ -59,7 +59,8 @@ class DestinationPage extends GetView<DestinationController> {
                     if (Get.isRegistered<DestinationController>()) {
                       Get.delete<DestinationController>(force: true);
                     }
-                    Get.toNamed(AppRoutes.dashboardPage);
+                    Get.offNamedUntil('/dashboardPage', (route) => false);
+                    // Get.toNamed(AppRoutes.dashboardPage);
                   } else {
                     Get.back();
                     controller.isDropEdit.value = false;
@@ -587,58 +588,6 @@ class DestinationPage extends GetView<DestinationController> {
           }),
     );
   }
-
-  /*Widget _end(
-      {String? hintText,
-        void Function(String)? onChanged,
-        void Function(String)? onSubmitted,
-        PlaceSearchPageController? destinationController,
-        FocusNode? destinationFocus,
-        void Function()? suffixOnTab,
-        void Function()? skipOnTab,
-        required BuildContext context}) {
-    return SizedBox(
-      height: 32.h,
-      child: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: destinationController!.destinationController,
-          builder: (context, value, child) {
-            return CustomTextField(
-              textController: destinationController.destinationController,
-              onChanged: onChanged,
-              onSubmitted: onSubmitted,
-              enable: true,
-              autofocus: */ /*controller.isDropEdit.value ||
-                  !controller.isSheetFullyExpanded.value
-                  ? false
-                  : true*/ /*false,
-              focusNode: destinationFocus,
-              style: _textStyle(),
-              // readOnly: false,
-              onTap: () {
-                controller.isSheetFullyExpanded.value = true;
-                controller.draggableSheetHeight.value = 1.0;
-                // if (controller.draggableScrollableController.isAttached) {
-                controller.draggableScrollableController.animateTo(
-                  1.0,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeIn,
-                );
-                // }
-              },
-              decoration: _textFieldDecoration(
-                hintText: hintText,
-                skipTab: skipOnTab,
-                onTab: suffixOnTab,
-                clearButtonVisible: value.text.isNotEmpty,
-                onClear: () {
-                  destinationController.destinationController.clear();
-                  if (onChanged != null) onChanged(''); // Clear callback
-                },
-              ),
-            );
-          }),
-    );
-  }*/
 
   _textFieldDecoration({
     String? hintText,

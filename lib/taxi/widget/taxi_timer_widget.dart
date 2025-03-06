@@ -14,7 +14,7 @@ showTaxiBookingTimerWidgetNew(
     Function()? setCurrentTime,
     required VoidCallback? Function(DateTime selectDateTime) onTap}) {
   final minDate = DateTime.now();
-  const difference = 120;
+  const difference = 30;
   final initialDate = minDate.add(const Duration(minutes: difference));
   var selectDateTime = initialDate.add(const Duration(milliseconds: 100));
 

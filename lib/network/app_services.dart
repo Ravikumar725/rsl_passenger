@@ -1,7 +1,12 @@
 import 'dart:convert';
 import 'package:get/get_instance/src/get_instance.dart';
 import 'package:rsl_passenger/network/services.dart';
-
+import '../taxi/data/booking_details_api_data.dart';
+import '../taxi/data/cancel_trip_api_data.dart';
+import '../taxi/data/get_driver_reply_api_data.dart';
+import '../taxi/data/get_trip_update_api_data.dart';
+import '../taxi/data/get_trip_update_dashboard_api_data.dart';
+import '../taxi/data/savebooking_api_data.dart';
 import '../widget/utils/app_info.dart';
 import '../dashboard/data/get_core_api_data.dart';
 import '../taxi/data/Known_location_pickup_list_api_date.dart';
@@ -22,21 +27,10 @@ Future<NearestDriversListResponseData> nearestDriverListApi(
       url: 'http://ec2-34-197-53-22.compute-1.amazonaws.com:8810/api/v1/nearestdriverlistAll'/*'${AppInfo.kNearestDriveApi}'*/,
       request: nearestDriversListRequestToJson(requestData),
     ),
-    disablePrintLog: false,
+    disablePrintLog: true,
   );
   return nearestDriversListResponseFromJson(response);
 }
-
-/*Future<SaveBookingResponseData> saveBookingApi(
-    SaveBookingRequestData requestData) async {
-  final response = await apiProvider.httpRequest(
-    resource: Resource(
-      url: '${AppInfo.kAppBaseUrl}taxi/savebookingWeb',
-      request: saveBookingRequestToJson(requestData),
-    ),
-  );
-  return saveBookingResponseFromJson(response);
-}*/
 
 Future<GetCoreApiResponseData> getCoreApi() async {
   final response = await apiProvider.httpRequest(
@@ -59,7 +53,7 @@ Future<SaveLocationResponseData> saveLocationApi(
     SaveLocationRequestData requestData) async {
   final response = await apiProvider.httpRequest(
     resource: Resource(
-      url: 'https://passnodeauth.limor.us/passenger/saveLocation',
+      url: '${AppInfo.rslAppBaseUrl}saveLocation',
       request: saveLocationRequestToJson(requestData),
     ),
   );
@@ -70,7 +64,7 @@ Future<SaveLocationListResponseData> saveLocationListApi(
     SaveLocationListRequestData requestData) async {
   final response = await apiProvider.httpRequest(
     resource: Resource(
-      url: 'https://passnodeauth.limor.us/passenger/locationList',
+      url: '${AppInfo.rslAppBaseUrl}locationList',
       request: saveLocationListRequestToJson(requestData),
     ),
   );
@@ -80,7 +74,7 @@ Future<SaveLocationListResponseData> saveLocationListApi(
 Future<CountryCityListResponseData> countryCityListApi() async {
   final response = await apiProvider.httpRequest(
     resource: Resource(
-      url: 'https://passnodeauth.limor.us/passenger/countryCityList',
+      url: '${AppInfo.rslAppBaseUrl}countryCityList',
       request: "",
     ),
   );
@@ -91,7 +85,7 @@ Future<KnownLocationListResponseData> knownLocationsApi(
     KnownLocationListRequestData requestData) async {
   final response = await apiProvider.httpRequest(
     resource: Resource(
-      url: 'https://passnodeauth.limor.us/passenger/knownLocations',
+      url: '${AppInfo.rslAppBaseUrl}knownLocations',
       request: knownLocationListRequestToJson(requestData),
     ),
   );
@@ -102,7 +96,7 @@ Future<KnownLocationListResponseData> knownLocationsByCityApi(
     KnownLocationByCityRequestData requestData) async {
   final response = await apiProvider.httpRequest(
     resource: Resource(
-      url: 'https://passnodeauth.limor.us/passenger/knownLocations',
+      url: '${AppInfo.rslAppBaseUrl}knownLocations',
       request: knownLocationByCityRequestToJson(requestData),
     ),
   );
@@ -113,9 +107,64 @@ Future<KnownLocationPickupResponseData> knownLocationsPickupApi(
     KnownLocationPickupRequestData requestData) async {
   final response = await apiProvider.httpRequest(
     resource: Resource(
-      url: 'https://passnodeauth.limor.us/passenger/knownLocations',
+      url: '${AppInfo.rslAppBaseUrl}knownLocations',
       request: knownLocationPickupRequestToJson(requestData),
     ),
   );
   return knownLocationPickupResponseFromJson(response);
+}
+
+Future<SaveBookingResponseData> saveBookingApi(
+    SaveBookingRequestData requestData) async {
+  final response = await apiProvider.httpRequest(
+    resource: Resource(
+      url: '${AppInfo.kAppBaseUrl}taxi/savebookingWeb',
+      request: saveBookingRequestToJson(requestData),
+    ),
+  );
+  return saveBookingResponseFromJson(response);
+}
+
+Future<GetTripUpdateDashResponseData> getTripUpdateApi(
+    GetTripUpdateRequestData requestData) async {
+  final response = await apiProvider.httpRequest(
+    resource: Resource(
+      url: '${AppInfo.kAppBaseUrl}taxi/getTripUpdate',
+      request: getTripUpdateRequestToJson(requestData),
+    ),
+  );
+  return getTripUpdateResponseFromJson(response);
+}
+
+Future<BookingDetailsResponseData> bookingDetailsApi(
+    BookingDetailsRequestData requestData) async {
+  final response = await apiProvider.httpRequest(
+    resource: Resource(
+      url: '${AppInfo.kAppBaseUrl}taxi/getTripDetail',
+      request: bookingDetailsRequestToJson(requestData),
+    ),
+  );
+  return bookingDetailsResponseFromJson(response);
+}
+
+Future<CancelTripResponseData> cancelTripApi(
+    CancelTripRequestData requestData) async {
+  final response = await apiProvider.httpRequest(
+    resource: Resource(
+      url: '${AppInfo.kAppBaseUrl}taxi/cancelTrip',
+      request: cancelTripRequestToJson(requestData),
+    ),
+  );
+  return cancelTripResponseFromJson(response);
+}
+
+Future<GetDriverReplyResponseData> getDriverReplyApi(
+    GetDriverReplyRequestData requestData) async {
+  final response = await apiProvider.httpRequest(
+    resource: Resource(
+      url: '${AppInfo.kAppBaseUrl}taxi/getDriverReplyBidding',
+      request: getGetDriverReplyRequestToJson(requestData),
+    ),
+  );
+  return getGetDriverReplyResponseFromJson(response);
 }

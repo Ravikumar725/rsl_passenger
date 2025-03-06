@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../controller/place_search_page_controller.dart';
-import '../../network/services.dart';
 import '../../widget/styles/app_style.dart';
 import '../../widget/styles/colors.dart';
 
@@ -149,8 +148,11 @@ class DestinationSuggestions extends GetView<PlaceSearchPageController> {
                   // saveLocationController.setSelectedPrediction(predictionList);
                   // Get.toNamed(NewAppRoutes.saveLocationPage);
                 },
-                child: Icon(Icons.favorite_outline,
-                    color: AppColor.kLightTextPrimary.value),
+                child: Padding(
+                  padding: EdgeInsets.only(left: 4.w),
+                  child: Icon(Icons.favorite_outline,
+                      color: AppColor.kLightTextPrimary.value),
+                ),
               ),
             ],
           ),

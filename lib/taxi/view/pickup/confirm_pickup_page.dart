@@ -5,9 +5,9 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rsl_passenger/routes/routes.dart';
 import '../../../assets/assets.dart';
-import '../../../controller/common_place_controller.dart';
 import '../../../controller/place_search_page_controller.dart';
 import '../../../network/services.dart';
+import '../../../widget/utils/enums.dart';
 import '../../../widget/utils/safe_area_container.dart';
 import '../../../widget/custom_button.dart';
 import '../../../widget/styles/app_style.dart';
@@ -42,115 +42,115 @@ class PickupScreen extends GetView<ConfirmPickupController> {
         }
         return false;
       },
-      child: /*Obx(
-        () =>*/ SafeAreaContainer(
-          // statusBarColor: controller.isSheetFullyExpandedPick.value == true
-          //     ? AppColor.kStatusBarPrimaryColor.value
-          //     : Colors.transparent,
-          child: Scaffold(
-            body: Stack(
-              children: [
-                _googleMap(),
-                _mapPin(),
-                _headerWidget(onTab: () {
-                  if (controller.isPickUpEdit.value == true) {
-                    printLogs("Hii ravi taxi is drop edit value is ${controller.isPickUpEdit.value}");
-                    Get.back();
-                  } else {
-                    printLogs("Hii ravi taxi is drop edit value is else ${controller.isPickUpEdit.value}");
-                    controller.onPickUpOnPress();
-                  }
-                }),
-                Positioned(
-                  bottom: MediaQuery.of(Get.context!).size.height / 3.4,
-                  left: 14.w,
-                  right: 14.w,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      CurrentLocationButtonWidget(
+      child: SafeAreaContainer(
+        // statusBarColor: controller.isSheetFullyExpandedPick.value == true
+        //     ? AppColor.kStatusBarPrimaryColor.value
+        //     : Colors.transparent,
+        child: Scaffold(
+          body: Stack(
+            children: [
+              _googleMap(),
+              _mapPin(),
+              _headerWidget(onTab: () {
+                if (controller.isPickUpEdit.value == true) {
+                  printLogs(
+                      "Hii ravi taxi is drop edit value is ${controller.isPickUpEdit.value}");
+                  Get.back();
+                } else {
+                  printLogs(
+                      "Hii ravi taxi is drop edit value is else ${controller.isPickUpEdit.value}");
+                  controller.onPickUpOnPress();
+                }
+              }),
+              Positioned(
+                bottom: MediaQuery.of(Get.context!).size.height / 3.4,
+                left: 14.w,
+                right: 14.w,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    CurrentLocationButtonWidget(
+                      onTap: () {
+                        controller.moveToCurrentLocation();
+                      },
+                      backgroundColor: AppColor.kStatusBarPrimaryColor.value,
+                      iconSize: 18.r,
+                      iconColor:
+                          AppColor.kLightTextPrimary.value.withOpacity(0.9),
+                    ),
+                    SizedBox(height: 4.h),
+                    Obx(
+                      () => MapSatelliteButtonWidget(
                         onTap: () {
-                          controller.moveToCurrentLocation();
+                          controller.changeMapType();
                         },
-                        backgroundColor: AppColor.kStatusBarPrimaryColor.value,
                         iconSize: 18.r,
-                        iconColor:
+                        activeColor: AppColor.kPrimaryColor.value,
+                        currentMapType: controller.mapType.value,
+                        inactiveColor:
                             AppColor.kLightTextPrimary.value.withOpacity(0.9),
                       ),
-                      SizedBox(height: 4.h),
-                      Obx(
-                        () => MapSatelliteButtonWidget(
-                          onTap: () {
-                            controller.changeMapType();
-                          },
-                          iconSize: 18.r,
-                          activeColor: AppColor.kPrimaryColor.value,
-                          currentMapType: controller.mapType.value,
-                          inactiveColor:
-                              AppColor.kLightTextPrimary.value.withOpacity(0.9),
-                        ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Obx(
+                      () => TrafficButtonWidget(
+                        onTap: () {
+                          controller.changeTrafficView();
+                        },
+                        isTrafficEnabled: controller.trafficEnabled.value,
+                        iconSize: 18.r,
+                        activeColor: AppColor.kPrimaryColor.value,
+                        inactiveColor:
+                            AppColor.kPrimaryTextColor.value.withOpacity(0.6),
                       ),
-                      SizedBox(height: 4.h),
-                      Obx(
-                        () => TrafficButtonWidget(
-                          onTap: () {
-                            controller.changeTrafficView();
-                          },
-                          isTrafficEnabled: controller.trafficEnabled.value,
-                          iconSize: 18.r,
-                          activeColor: AppColor.kPrimaryColor.value,
-                          inactiveColor:
-                              AppColor.kPrimaryTextColor.value.withOpacity(0.6),
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: 4.h),
+                  ],
                 ),
-                _bottomDraggableSheet(favOnTab: () {
-                  controller.saveLocationController.setSelectedLocation(
-                      controller.getAddress.value,
-                      controller.getAddress.value,
-                      controller.target.value);
-                  Get.toNamed(AppRoutes.saveLocationPage);
-                }, confirmTab: () {
-                  try {
-                    if (!Get.isRegistered<CitySelectionController>()) {
-                      Get.put(CitySelectionController());
-                    }
-                    controller.commonPlaceController.getPosition?.value =
-                        GetPoistion.pin;
-                    controller.saveLocationController.setSelectedLocation(
-                      controller.getAddress.value,
-                      controller.getAddress.value,
-                      controller.target.value,
-                    );
-                    Get.toNamed(AppRoutes.taxiHomePageNew);
-                  } catch (e, stackTrace) {
-                    printLogs("Error occurred in confirmTab: $e");
-                    printLogs(stackTrace);
+              ),
+              _bottomDraggableSheet(favOnTab: () {
+                controller.saveLocationController.setSelectedLocation(
+                    controller.getAddress.value,
+                    controller.getAddress.value,
+                    controller.target.value);
+                Get.toNamed(AppRoutes.saveLocationPage);
+              }, confirmTab: () {
+                try {
+                  if (!Get.isRegistered<CitySelectionController>()) {
+                    Get.put(CitySelectionController());
                   }
-                }, nowOnTab: () {
-                  showTaxiBookingTimerWidgetNew(
-                      searchEnable: true,
-                      laterEnable: controller.isLaterBooking,
-                      setCurrentTime: () {
-                        controller.commonPlaceController.laterBookingDateTime
-                            .value = "";
-                        Get.back();
-                      },
-                      onTap: (selectDateTime) {
-                        controller.commonPlaceController.setBookLaterDateTime(
-                          dateTime: selectDateTime,
-                        );
-                        return;
-                      });
-                }),
-              ],
-            ),
+                  controller.commonPlaceController.getPosition?.value =
+                      GetPoistion.pin;
+                  controller.saveLocationController.setSelectedLocation(
+                    controller.getAddress.value,
+                    controller.getAddress.value,
+                    controller.target.value,
+                  );
+                  Get.toNamed(AppRoutes.taxiHomePage);
+                } catch (e, stackTrace) {
+                  printLogs("Error occurred in confirmTab: $e");
+                  printLogs(stackTrace);
+                }
+              }, nowOnTab: () {
+                showTaxiBookingTimerWidgetNew(
+                    searchEnable: true,
+                    laterEnable: controller.isLaterBooking,
+                    setCurrentTime: () {
+                      controller.commonPlaceController.laterBookingDateTime
+                          .value = "";
+                      Get.back();
+                    },
+                    onTap: (selectDateTime) {
+                      controller.commonPlaceController.setBookLaterDateTime(
+                        dateTime: selectDateTime,
+                      );
+                      return;
+                    });
+              }),
+            ],
           ),
         ),
-      // ),
+      ),
     );
   }
 
@@ -479,7 +479,7 @@ class PickupScreen extends GetView<ConfirmPickupController> {
               } else {
                 controller.commonPlaceController.getPosition?.value ==
                     GetPoistion.pin;
-                Get.toNamed(AppRoutes.taxiHomePageNew);
+                Get.toNamed(AppRoutes.taxiHomePage);
               }
             },
             child: Padding(

@@ -79,7 +79,7 @@ class AppInfo {
   }
 
   static String getAppBaseUrl() {
-    return "${kAppGetCore?.responseData?.lifeStyleBaseUrl}";
+    return "http://157.241.59.247:4004/"/*"${kAppGetCore?.responseData?.lifeStyleBaseUrl}"*/;
   }
 
   static String getAppImageBaseUrl() {
@@ -91,7 +91,7 @@ class AppInfo {
   }
 
   static String getRslAppBaseUrl() {
-    return "${kAppGetCore?.responseData?.rslnodeBaseUrl}";
+    return "https://passnodeauth.limor.us/passenger/"/*"${kAppGetCore?.responseData?.rslnodeBaseUrl}"*/;
   }
 
   static String getRslAppDeactiveBaseUrl() {

@@ -1,13 +1,14 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:rsl_passenger/widget/utils/global_utils.dart';
 import '../../../../network/app_services.dart';
 import '../../../routes/routes.dart';
+import '../../widget/utils/alert_helpers.dart';
 import '../../widget/utils/app_info.dart';
 import '../../assets/assets.dart';
 import '../../controller/common_place_controller.dart';
@@ -18,20 +19,18 @@ import '../../dashboard/data/get_core_api_data.dart';
 import '../../network/services.dart';
 import '../../taxi/data/nearest_drivers_list_api_data.dart';
 import '../../widget/styles/colors.dart';
-import '../../widget/utils/approximate_fare_calculation_new.dart';
+import '../../widget/utils/basic_utils.dart';
+import '../../widget/utils/enums.dart';
+import '../data/get_driver_reply_api_data.dart';
+import '../data/get_trip_update_api_data.dart';
+import '../data/savebooking_api_data.dart';
+import '../widget/approximate_fare_calculation.dart';
 import '../widget/custom_map_marker.dart';
 import '../../widget/utils/map_marker.dart';
 import '../../widget/utils/polyline_utils.dart';
 import '../widget/taxi_timer_widget.dart';
 import 'confirm_pickup_controller.dart';
 import 'destination_controller.dart';
-
-enum ApproximateDistanceCalculated { kWaiting, kCompleted }
-
-enum BookingState {
-  kBookingStateOne,
-  kBookingStateTwo,
-}
 
 class ApiResponseStatus {
   int? status;
@@ -41,8 +40,8 @@ class ApiResponseStatus {
       {this.status = 15, this.message = "Connecting to server...."});
 }
 
-class TaxiControllerNew extends GetxController
-    with GetSingleTickerProviderStateMixin, WidgetsBindingObserver {
+class TaxiController extends GetxController
+    with GetSingleTickerProviderStateMixin {
   final commonPlaceController = Get.find<CommonPlaceController>();
   final placeSearchPageController = Get.find<PlaceSearchPageController>();
   final dashboardController = Get.find<DashBoardController>();
@@ -50,21 +49,15 @@ class TaxiControllerNew extends GetxController
   final destinationController = Get.find<DestinationController>();
   late AnimationController? animationController;
   var guestFormKey = GlobalKey<FormState>();
-  var guestContryCode = "+971".obs;
+  var guestCountryCode = "+971".obs;
   var PAYMENT_ID_CASH = 1.obs;
   var PAYMENT_ID_CARD = 2.obs;
-  var PAYMENT_ID_WALLET = 3.obs;
-  var PAYMENT_ID_APPLEPAY = 4.obs;
   var paymentType = 1.obs;
   RxString appVersion = "".obs;
   RxString appBuildNumber = "".obs;
 
-  TextEditingController guestPhoneNumber = TextEditingController();
-  TextEditingController guestEmailId = TextEditingController();
   TextEditingController promoCodeController = TextEditingController();
-  RxBool viewGuestFieldForm = false.obs;
 
-  Rx<Polyline>? polylineAnimate;
   RxBool isLoading = false.obs;
 
   RxBool showActivePromo = false.obs;
@@ -76,10 +69,12 @@ class TaxiControllerNew extends GetxController
 
   RxBool isPromoApplied = false.obs;
 
-  RxBool guestLoader = false.obs;
-  RxString selectedGuest = "Me".obs;
-  RxString selectedGuestPhone = "".obs;
-  RxString isGuestBooking = "0".obs;
+  RxDouble secondSheetSize = 0.13.obs;
+  final ValueNotifier<double> draggableSheetHeight = ValueNotifier(0.45);
+  late DraggableScrollableController draggableScrollableController;
+  late DraggableScrollableController bottomDraggableScrollableController;
+  final ValueNotifier<bool> isSheetFullyExpanded = ValueNotifier(false);
+  var isControllerAttached = false.obs;
 
   //Taxi new
   RxString bookingStatus = "Create a booking".obs;
@@ -93,8 +88,10 @@ class TaxiControllerNew extends GetxController
 
   Rx<ApproximateDistanceCalculated> distanceCalculated =
       Rx<ApproximateDistanceCalculated>(ApproximateDistanceCalculated.kWaiting);
+
   bool get isDistanceCalcWaiting =>
       distanceCalculated.value == ApproximateDistanceCalculated.kWaiting;
+
   bool get isDistanceCalcCompleted =>
       distanceCalculated.value == ApproximateDistanceCalculated.kCompleted;
 
@@ -107,140 +104,21 @@ class TaxiControllerNew extends GetxController
   void onInit() async {
     draggableScrollableController = DraggableScrollableController();
     bottomDraggableScrollableController = DraggableScrollableController();
-    WidgetsBinding.instance.addObserver(this);
     _callNearestDriversListApi();
     _fetchRoute();
     animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
-      //Use TickerProviderStateMixin
     );
     await getUserInfo();
     await getAppInfo();
-    WidgetsBinding.instance.addPostFrameCallback((_) {});
     _scheduleNearestDriversListApiTimer();
+    selectedCarModelList.value =
+        dashboardController.getApiData.value.rslGetCore?[0].modelDetails?[1] ??
+            ModelDetails();
+    WidgetsBinding.instance.addPostFrameCallback((_) {});
     _getCarImage();
     super.onInit();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    // Handle app lifecycle changes
-    switch (state) {
-      case AppLifecycleState.resumed:
-        addPickUpDropMarkers();
-        print('Hii App resumed');
-        break;
-      case AppLifecycleState.inactive:
-        print('Hii App inactive');
-        break;
-      case AppLifecycleState.paused:
-        print('Hii App paused');
-        break;
-      case AppLifecycleState.detached:
-        print('Hii App detached');
-        break;
-      case AppLifecycleState.hidden:
-        // TODO: Handle this case.
-        throw UnimplementedError();
-    }
-  }
-
-  onCarModelSelected(int index, String? fare) {
-    var carModel = carModelList[index];
-    showButtonLoader.value = true;
-    selectedCarModel.value = carModel;
-
-    selectedCarModelList.value = dashboardController
-            .getApiData.value.rslGetCore?[0].modelDetails?[index + 1] ??
-        ModelDetails();
-
-    selectedModelIndex.value = index;
-    selectedModelIndex.refresh();
-    carModelList.refresh();
-
-    approximateFare.value = fare?.isNotEmpty == true ? fare! : "0.0";
-    approximateFare.refresh();
-    tripFare.value = approximateFare.value ?? "";
-    tripFare.refresh();
-
-    priceHike.value = carModel.priceHike.toString();
-    _addNoDriverPickUpMarker();
-    _callNearestDriversListApi();
-  }
-
-  void moveToTrackingPage() {
-    startBookingStatusTimer();
-    startProgress();
-    startTimer();
-  }
-
-  Timer? bookingStatusTimer;
-
-  void startBookingStatusTimer() {
-    int statusIndex = 0;
-    List<String> statuses = [
-      "Create a booking",
-      "Finding your Captain",
-      "Checking optimal routes",
-      "Locating nearest Captain"
-    ];
-
-    bookingStatusTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (statusIndex < statuses.length) {
-        bookingStatus.value = statuses[statusIndex];
-        statusIndex++;
-      } else {
-        timer.cancel(); // Stop the timer after all statuses are shown
-      }
-    });
-  }
-
-  Timer? progressTimer;
-
-  void startProgress() {
-    progressTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (progressValue.value < 1.0) {
-        if (progressValue.value == 0.1) {
-          progressValue.value = 0.2;
-          bookingStatus.value = 'Create a booking';
-        } else if (progressValue.value == 0.2) {
-          progressValue.value = 0.4;
-          bookingStatus.value = 'Finding your Captain';
-        } else if (progressValue.value == 0.4) {
-          progressValue.value = 0.6;
-          bookingStatus.value = 'Checking optimal routes';
-        } else if (progressValue.value == 0.6) {
-          progressValue.value = 0.8;
-          bookingStatus.value = 'Locating nearest Captain';
-          timer.cancel();
-        }
-      }
-    });
-  }
-
-  int elapsedSeconds = 0;
-
-  void startTimer() {
-    const int targetDuration = 30; // Target duration in seconds
-
-    // Start the timer
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      elapsedSeconds++;
-
-      if (elapsedSeconds >= targetDuration) {
-        // Cancel the timer when it reaches 30 seconds
-        timer.cancel();
-        // Get.toNamed(NewAppRoutes.trackingPageNew);
-        printLogs("Timer canceled after $targetDuration seconds.");
-        // Perform any additional actions after canceling the timer
-      } else {
-        // Update your UI or perform any periodic action
-        printLogs("Elapsed time: $elapsedSeconds seconds");
-      }
-    });
   }
 
   // Cancel the timer if needed
@@ -248,21 +126,6 @@ class TaxiControllerNew extends GetxController
     if (_timer?.isActive ?? false) {
       _timer?.cancel(); // Cancel the timer if it's still active
     }
-  }
-
-  void cancelAllTimers() {
-    // Cancel booking status timer
-    bookingStatusTimer?.cancel();
-
-    // Cancel progress timer
-    progressTimer?.cancel();
-
-    // Cancel the main navigation timer
-    cancelTimer();
-  }
-
-  void updateProgress(double value) {
-    progressValue.value = value;
   }
 
   @override
@@ -297,7 +160,7 @@ class TaxiControllerNew extends GetxController
 
   final storageController = Get.find<GetStorageController>();
 
-  GoogleMapController? mapController = null;
+  GoogleMapController? mapController;
 
   Rx<CarModelData> selectedCarModel = CarModelData().obs;
   RxList<CarModelData> carModelList = <CarModelData>[].obs;
@@ -314,7 +177,6 @@ class TaxiControllerNew extends GetxController
   var selectedModelIndex = 0.obs;
   var showButtonLoader = true.obs;
   var showCancelBookingLoader = false.obs;
-  var isDistanceCalculated = false.obs;
 
 // var laterBookingDateTime = ''.obs;
   var overViewPolyLine = ''.obs;
@@ -326,7 +188,6 @@ class TaxiControllerNew extends GetxController
   var priceHike = "".obs;
   var tripFare = "".obs;
 
-  final userId = '33164';
   String? tripId;
   BitmapDescriptor? carIcon;
 
@@ -334,11 +195,6 @@ class TaxiControllerNew extends GetxController
 
   String get laterBookingDateTime =>
       commonPlaceController.laterBookingDateTime.value;
-
-  String get hourlyBookingDateTime =>
-      commonPlaceController.hourlyBookingDateTime.value;
-
-  bool get isHourlyBooking => hourlyBookingDateTime.isNotEmpty;
 
   bool get isLaterBooking => laterBookingDateTime.isNotEmpty;
 
@@ -348,9 +204,6 @@ class TaxiControllerNew extends GetxController
 
   DriverDetail? previousNearestDriverData;
   LatLng? previousPickUpLatLng;
-  int? oneTimeDiscount = 0;
-  var oneTimeDiscountType = 1.obs;
-  var defaultCard = 0.obs;
   var mapType = MapType.normal.obs;
   var trafficEnabled = false.obs;
 
@@ -364,14 +217,95 @@ class TaxiControllerNew extends GetxController
   }
 
   onCancelClicked() {
-    Navigator.pop(Get.context!); // Close CancelReasonsBottomSheet
-    Get.back(); // Close cancelBottomAlert
-    // _showCancelBookingConfirmation();
+    Navigator.pop(Get.context!);
+    Get.back();
+    _callGetDriverReplyApi();
+  }
+
+  void _callGetDriverReplyApi() {
+    showCancelBookingLoader.value = true;
+    getDriverReplyApi(
+      GetDriverReplyRequestData(passengerTripId: tripId),
+    ).then((response) {
+      showCancelBookingLoader.value = false;
+      switch (response.status) {
+        case 1:
+          _refreshToBookingStateOne();
+          showAppDialog(
+              message: '${response.message}', confirm: defaultAlertConfirm());
+          break;
+        case 3:
+          _refreshToBookingStateOne();
+          Get.snackbar('Booking cancelled', '${response.message}',
+              backgroundColor: AppColor.kGetSnackBarColor.value);
+          break;
+        default:
+          Get.snackbar('Alert', '${response.message}',
+              backgroundColor: AppColor.kGetSnackBarColor.value);
+      }
+    }).onError((error, stackTrace) {
+      showCancelBookingLoader.value = false;
+      Get.snackbar('Message', 'Something went wrong.',
+          backgroundColor: AppColor.kGetSnackBarColor.value);
+    });
   }
 
   onBackPressed() {
-    _cancelNearestDriversListTimer();
-    Get.back();
+    if (bookingState.value == BookingState.kBookingStateTwo) {
+      _refreshToBookingStateOne();
+    } else {
+      _cancelNearestDriversListTimer();
+      Get.back();
+    }
+  }
+
+  onCarModelSelected(int index, String? fare) {
+    printLogs(
+        "Hii ravi taxi approximate fare Selected Index: $index, Fare: $fare");
+    final selectedIndex = carModelList
+        .indexWhere((item) => item.modelId == carModelList[index].modelId);
+
+    if (selectedIndex != -1) {
+      // Set isSelected for all items
+      for (var item in carModelList) {
+        item.isSelected = false;
+      }
+
+      // Move the selected item to the first position
+      final selectedItem = carModelList.removeAt(selectedIndex);
+      selectedItem.isSelected = true;
+      carModelList.insert(0, selectedItem);
+      carModelList.refresh();
+    }
+    // var carModel = carModelList[index];
+    showButtonLoader.value = true;
+    selectedCarModel.value = carModelList.firstOrNull ?? CarModelData();
+    for (ModelDetails coreModel in dashboardController
+            .getApiData.value.rslGetCore?.firstOrNull?.modelDetails ??
+        []) {
+      if (coreModel.modelId == selectedCarModel.value.modelId) {
+        selectedCarModelList.value = coreModel;
+        selectedCarModelList.refresh();
+        break;
+      } else {
+        selectedCarModelList.value = ModelDetails();
+        selectedCarModelList.refresh();
+      }
+    }
+
+    // Handle null fare properly
+    approximateFare.value = fare?.isNotEmpty == true ? fare! : "0.0";
+    approximateFare.refresh();
+    tripFare.value =
+        approximateFare.value.isEmpty ? "0.0" : approximateFare.value;
+    tripFare.refresh();
+
+    printLogs(
+        "Hii sabari taxi approximate fare Updated Approximate Fare: ${approximateFare.value}");
+
+    priceHike.value = selectedCarModel.value.priceHike.toString();
+    _addNoDriverPickUpMarker();
+    _callNearestDriversListApi();
   }
 
   onBackToConfirmPickUp() {
@@ -409,27 +343,25 @@ class TaxiControllerNew extends GetxController
           _driverDetails = nearestDriversListResponse.detail;
           _checkDriverDistanceAndUpdatePickUpMarker();
           _updateVehicleMarkers();
+          _checkAndUpdateModelList(nearestDriversListResponse.fareDetails);
           _checkAndCalculateApproxFare(nearestDriversListResponse.fareDetails);
           selectedCarModel.value =
               nearestDriversListResponse.fareDetails?[0] ?? CarModelData();
           selectedCarModel.refresh();
-          // approximateFare.value =
-          //     "${nearestDriversListResponse.fareDetails?[0].approximateFare}";
-          // approximateFare.refresh();
           printLogs("CAR MODEL LIST : ${carModelList.length}");
           break;
         case 0:
-          // carModelApiStatus.value.status = 1;
           isLoading.value = false;
           carModelApiStatus.value.status = nearestDriversListResponse.status;
           carModelApiStatus.refresh();
-          print(
+          printLogs(
               "Case0nearestDriversListResponse${nearestDriversListResponse.status}");
           availableCarCount.value = 0;
           availableDriverDetail.value = null;
           _driverDetails = null;
           _checkDriverDistanceAndUpdatePickUpMarker();
           _removeAllVehicleMarkers();
+          _checkAndUpdateModelList(nearestDriversListResponse.fareDetails);
           _checkAndCalculateApproxFare(nearestDriversListResponse.fareDetails);
           break;
         default:
@@ -452,7 +384,7 @@ class TaxiControllerNew extends GetxController
       checkExcessFareAndShowInfo(nearestDriversListResponse.fareDetails);
       switch (nearestDriversListResponse.status) {
         case 1:
-          print(
+          printLogs(
               "Case1nearestDriversListResponse${nearestDriversListResponse.status}");
           carModelApiStatus.value.status = nearestDriversListResponse.status;
           carModelApiStatus.refresh();
@@ -462,12 +394,12 @@ class TaxiControllerNew extends GetxController
           availableDriverDetail.value =
               nearestDriversListResponse.detail?.first ?? DriverDetail();
           _driverDetails = nearestDriversListResponse.detail;
+          _checkAndUpdateModelList(nearestDriversListResponse.fareDetails);
           _updateVehicleMarkers();
           _checkDriverDistanceAndUpdatePickUpMarker();
-          // _checkAndCalculateApproxFare(nearestDriversListResponse.fareDetails);
           break;
         case 0:
-          print(
+          printLogs(
               "case 0 nearestDriversListResponse${nearestDriversListResponse.status}");
           isLoading.value = false;
           carModelApiStatus.value.status = nearestDriversListResponse.status;
@@ -479,7 +411,6 @@ class TaxiControllerNew extends GetxController
           _driverDetails = null;
           _removeAllVehicleMarkers();
           _checkDriverDistanceAndUpdatePickUpMarker();
-          // _checkAndCalculateApproxFare(nearestDriversListResponse.fareDetails);
           break;
         default:
           isLoading.value = false;
@@ -506,34 +437,39 @@ class TaxiControllerNew extends GetxController
         switch (item.modelId) {
           case 1:
             imageUrl =
-            'https://web.limor.us/public/uploads/model_image/android/1_1661864880_focus.png';
+                'https://web.limor.us/public/uploads/model_image/android/1_1661864880_focus.png';
             break;
           case 10:
             imageUrl =
-            "https://web.limor.us/public/uploads/model_image/android/10_1661864933_focus.png";
+                "https://web.limor.us/public/uploads/model_image/android/10_1661864933_focus.png";
             break;
           case 23:
             imageUrl =
-            "https://web.limor.us/public/uploads/model_image/android/23_1661864963_focus.png";
+                "https://web.limor.us/public/uploads/model_image/android/23_1661864963_focus.png";
             break;
           case 19:
             imageUrl =
-            "https://web.limor.us/public/uploads/model_image/android/19_1661864983_focus.png";
+                "https://web.limor.us/public/uploads/model_image/android/19_1661864983_focus.png";
             break;
           default:
             imageUrl =
-            'https://web.limor.us/public/uploads/model_image/android/1_1661864880_focus.png';
+                'https://web.limor.us/public/uploads/model_image/android/1_1661864880_focus.png';
         }
 
         // Add the "imageUrl" parameter to the item
         item.image = imageUrl;
       }
 
-      carModelList.value = fareDetails;
-      carModelList.refresh();
-      selectedCarModel.value = carModelList[0];
-      selectedCarModel.refresh();
-      selectedModelIndex.value = 0;
+      if (fareDetails.isNotEmpty) {
+        carModelList.value = fareDetails;
+        carModelList.refresh();
+        carModelList[0].isSelected = true;
+        selectedCarModel.value = carModelList[0];
+        selectedCarModel.refresh();
+        selectedModelIndex.value = 0;
+        carModelList.refresh();
+        updateImage();
+      }
     }
   }
 
@@ -593,7 +529,7 @@ class TaxiControllerNew extends GetxController
         dropLng: '${commonPlaceController.dropLatLng.value.longitude}',
         address: commonPlaceController.pickUpLocation.value,
         cityName: '',
-        passengerId: userId,
+        passengerId: GlobalUtils.rslID,
         placeId: '',
         routePolyline: overViewPolyLine.value,
         motorModel: '${selectedCarModel.value.modelId}',
@@ -642,8 +578,6 @@ class TaxiControllerNew extends GetxController
     markers.clear();
 
     for (DriverDetail driverDetail in _driverDetails ?? []) {
-      printLogs(
-          "CAR MARKER UPDATED ${driverDetail.latitude}, ${driverDetail.longitude}");
       markers.add(
         Marker(
           markerId: MarkerId('${driverDetail.taxiId}'),
@@ -671,13 +605,11 @@ class TaxiControllerNew extends GetxController
         height: 80);
 
     carIcon = BitmapDescriptor.fromBytes(dropMarker);
-
-    // carIcon = await BitmapDescriptor.fromAssetImage(
-    //     ImageConfiguration(size: Size(24, 24)), Assets.carIcon);
   }
 
   void _checkAndCalculateApproxFare(List<CarModelData>? fareDetails) {
-    if (commonPlaceController.dropLatLng.value.latitude == 0) {
+    if (commonPlaceController.dropLatLng.value.latitude == 0 ||
+        commonPlaceController.dropLatLng.value.latitude == 0.0) {
       for (var item in carModelList) {
         if (item.approximateFare != 0) {
           item.approximateFare = 0;
@@ -685,9 +617,8 @@ class TaxiControllerNew extends GetxController
       }
       return;
     }
-    // approximateFare.value = selectedCarModel.value.approximateFare.toString();
+    calculateApproximateFare(fareDetails ?? [], this);
     priceHike.value = selectedCarModel.value.priceHike.toString();
-    // approximateFare.refresh();
     printLogs(
         "Hii ravi taxi selectedCarModel approximateFare: ${selectedCarModel.value.approximateFare} ** ${approximateFare.value}");
 
@@ -695,82 +626,10 @@ class TaxiControllerNew extends GetxController
     carModelList.refresh();
   }
 
-  void calculateFareForAll(
-      String? discountPercentage, String? maximumDiscount) {
-    if (discountPercentage != null && maximumDiscount != null) {
-      for (var carModelData in carModelList) {
-        // printLogs(
-        //     "hii calculateFareForAll $discountPercentage $maximumDiscount");
-        isPromoApplied.value = true;
-        // carModelData.originalFare = carModelData.approximateFare.toString();
-        var discountPercentageValue =
-            double.tryParse(discountPercentage) ?? 0.0;
-        var maximumDiscountValue = double.tryParse(maximumDiscount) ?? 0.0;
-
-        var discount = double.parse(carModelData.approximateFare.toString()) *
-            (discountPercentageValue * 0.01);
-
-        var fareToDeduct = discount;
-        if (maximumDiscountValue > 0) {
-          fareToDeduct = min(discount, maximumDiscountValue);
-        }
-        // printLogs("hii calculateFareForAll $fareToDeduct");
-        if (carModelData.approximateFareWithWaitingFare != null) {
-          if (carModelData.approximateFare?.round() !=
-                  carModelData.approximateFareWithWaitingFare?.round() &&
-              carModelData.approximateFareWithWaitingFare!.round() >
-                  carModelData.approximateFare!.round()) {
-            carModelData.fareRange =
-                "${(carModelData.approximateFare! - fareToDeduct).round()} - ${(carModelData.approximateFareWithWaitingFare! - fareToDeduct).round()}";
-            carModelData.originalFare =
-                "${carModelData.approximateFare?.round()} - ${carModelData.approximateFareWithWaitingFare?.round()}";
-            tripFare.value = carModelData.fareRange ?? "";
-          } else {
-            carModelData.fareRange =
-                "${(carModelData.approximateFare! - fareToDeduct).round()}";
-            carModelData.originalFare =
-                "${carModelData.approximateFare?.round()}";
-            tripFare.value = carModelData.fareRange ?? "";
-          }
-        } else {
-          carModelData.fareRange =
-              "${(carModelData.approximateFare! - fareToDeduct).round()}";
-          carModelData.originalFare =
-              "${carModelData.approximateFare?.round()}";
-          tripFare.value = carModelData.fareRange ?? "";
-        }
-        carModelData.approximateFare =
-            carModelData.approximateFare!.round() - fareToDeduct.round();
-      }
-      carModelList.refresh();
-    } else {
-      for (var carModelData in carModelList) {
-        isPromoApplied.value = true;
-        carModelData.originalFare = carModelData.approximateFare.toString();
-        if (carModelData.approximateFare?.round() !=
-                carModelData.approximateFareWithWaitingFare?.round() &&
-            carModelData.approximateFareWithWaitingFare!.round() >
-                carModelData.approximateFare!.round()) {
-          carModelData.fareRange =
-              "${carModelData.approximateFare?.round()} - ${carModelData.approximateFareWithWaitingFare?.round()}";
-          tripFare.value = carModelData.fareRange ?? "";
-        } else {
-          carModelData.fareRange = "${carModelData.approximateFare?.round()}";
-          tripFare.value = carModelData.fareRange ?? "";
-        }
-      }
-      carModelList.refresh();
-    }
-  }
-
   void addPickUpDropMarkers({bool fetchRoute = false}) async {
     String dropCity = commonPlaceController.dropLocation.value.split(" - ")[0];
-    printLogs(
-        "Hii Taxi pickUp drop marker is ${commonPlaceController.dropLocation.value} ** $dropCity ** ${commonPlaceController.pickUpLatLng.value}");
     String pickupCity =
         commonPlaceController.pickUpLocation.value.split(RegExp(r" - |,"))[0];
-    // String pickupCityName =
-    //     commonPlaceController.pickUpLocation.value.split(" - ")[1];
     calculateArrivalTime();
     pickUpDropMarkers.clear();
     _fetchRoute();
@@ -787,7 +646,6 @@ class TaxiControllerNew extends GetxController
                 time: "Pick-up",
                 textColor: AppColor.kPrimaryTextColor.value,
                 backgroundColor: AppColor.kStatusBarPrimaryColor.value)));
-//pickDistanceMarker(color:AppColor.kPrimaryColor.value )
     if (commonPlaceController.dropLatLng.value.latitude != 0.0) {
       await Future.delayed(const Duration(milliseconds: 1500));
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -826,9 +684,6 @@ class TaxiControllerNew extends GetxController
   }
 
   void clearDropOffValues({bool moveCamera = false}) {
-    // commonPlaceController.dropLatLng.value = const LatLng(0, 0);
-    // commonPlaceController.dropLocation.value = '';
-    // commonPlaceController.laterBookingDateTime.value = '';
     _resetApproximateTimeDistance();
     if (pickUpDropMarkers.length > 1) {
       pickUpDropMarkers
@@ -856,11 +711,8 @@ class TaxiControllerNew extends GetxController
   void _fetchRoute() async {
     LatLng startMarker = commonPlaceController.pickUpLatLng.value;
     LatLng endMarker = commonPlaceController.dropLatLng.value;
-    // String apiKey =
-    //     AppInfo.kGoogleMapKey; // Replace with your Google Maps API key
-    printLogs("Hii Taxi fetchRoute latLng $startMarker ** $endMarker");
     googleMapApi(
-      'http://157.241.59.247:4004/taxi/getDirections?origin=${startMarker.latitude},${startMarker.longitude}&destination=${endMarker.latitude},${endMarker.longitude}&mode=driving',
+      '${AppInfo.kAppBaseUrl}taxi/getDirections?origin=${startMarker.latitude},${startMarker.longitude}&destination=${endMarker.latitude},${endMarker.longitude}&mode=driving',
     ).then((response) {
       printLogs("POLYLINE ${response.toString()}");
       fetchOverviewPolyline(response);
@@ -882,6 +734,7 @@ class TaxiControllerNew extends GetxController
           final overViewPoly = overviewPolyLines?['points'] as String? ?? '';
           overViewPolyLine.value = overViewPoly;
           drawRoutePolyline(decodePolylineStringToLatLng(overViewPoly));
+          _callNearestDriversListApi();
 
           // Process legs array
           final legsArray = routes['legs'] as List<dynamic>;
@@ -919,17 +772,9 @@ class TaxiControllerNew extends GetxController
             }
           }
 
-          // Update approximate values
           approximateTime.value = doubleWithTwoDigits(time / 60);
           approximateTrafficTime.value = doubleWithTwoDigits(trafficTime / 60);
           approximateDistance.value = doubleWithTwoDigits(distance / 1000);
-
-          printLogs(
-              "Hii ravi Approximate traffic time: ${approximateTrafficTime.value}");
-          printLogs(
-              "Hii ravi Approximate normal time: ${approximateTime.value}");
-          printLogs(
-              "Hii ravi Approximate distance: ${approximateDistance.value}");
 
           calculateArrivalTime();
         }
@@ -973,32 +818,6 @@ class TaxiControllerNew extends GetxController
     }
   }
 
-// void animatePolyline(List<LatLng> points) async {
-//   polylinePoints.value = []; // Clear existing points
-
-//   for (int i = 0; i < points.length; i++) {
-//     await Future.delayed(
-//       Duration(
-//         seconds: 3,
-//       ),
-//     ); // Delay between each point
-//     polylinePoints.add(
-//       points[i],
-//     );
-//   }
-// }
-
-// void createPolyline() {
-//   polyline.add(
-//     Polyline(
-//       polylineId: PolylineId('route'),
-//       color: Colors.red,
-//       width: 5,
-//       points: polylinePoints,
-//     ),
-//   );
-// }
-
   void drawRoutePolyline(List<LatLng> result) {
     polyline.clear();
     Polyline blackPolyline = Polyline(
@@ -1022,22 +841,6 @@ class TaxiControllerNew extends GetxController
             ? result.sublist(
                 0, (animationController!.value * result.length).round())
             : result);
-    // List<LatLng> getAnimatedPoints() {
-    //   final animationValue = animationController!.value;
-    //   final endIndex = (animationValue * result.length).toInt();
-    //   return result.sublist(0, endIndex);
-    // }
-
-    // Polyline getAnimatedPolyline() {
-    //   polyline.refresh();
-    //   final animatedPoints = getAnimatedPoints();
-    //   return Polyline(
-    //     polylineId: PolylineId('greyPolyLine'),
-    //     color: Colors.orange,
-    //     width: 5,
-    //     points: animatedPoints,
-    //   );
-    // }
 
     polyline
       ..add(blackPolyline)
@@ -1045,9 +848,6 @@ class TaxiControllerNew extends GetxController
     polyline.refresh();
 
     _setLatLngBounds(result);
-
-    // animatePolyline(blackPolyline.points);
-    //_animationController?.repeat(reverse: true);
   }
 
   void startAnimation() {
@@ -1074,13 +874,6 @@ class TaxiControllerNew extends GetxController
           commonPlaceController.setBookLaterDateTime(dateTime: selectDateTime);
           return;
         });
-    // if (back == true) {
-    //   laterBookingDateTime.value =
-    //       commonPlaceController.laterBookingDateTime.value;
-    //   print("hisabari showBookingTimer$back");
-    // } else {
-    //   print("hisabari showBookingTimer$back");
-    // }
   }
 
   void _checkDriverDistanceAndUpdatePickUpMarker() {
@@ -1123,13 +916,6 @@ class TaxiControllerNew extends GetxController
   }
 
   void _addDistanceMarker() async {
-    /* double distance = await calculateHaverShineDistance(
-        startLat: commonPlaceController.pickUpLatLng.value.latitude,
-        startLng: commonPlaceController.pickUpLatLng.value.longitude,
-        endLat: availableDriverDetail.value?.latitude ?? 0.0,
-        endLng: availableDriverDetail.value?.longitude ?? 0.0);
-    int timeInMinutes = minutesUsingDistance(distance: distance);
-    timeInMinutes = (timeInMinutes >= 1) ? timeInMinutes : 1;*/
     // Distance in kilometers
     num timeInMinutes = 1;
     var driverDetail = availableDriverDetail.value;
@@ -1147,13 +933,6 @@ class TaxiControllerNew extends GetxController
               availableDriverDetail.value?.latitude ?? 0.0,
               availableDriverDetail.value?.longitude ?? 0.0);
         } else {
-          // double distance = calculateHaverShineDistance(
-          //     startLat: commonPlaceController.pickUpLatLng.value.latitude,
-          //     startLng: commonPlaceController.pickUpLatLng.value.longitude,
-          //     endLat: availableDriverDetail.value?.latitude ?? 0.0,
-          //     endLng: availableDriverDetail.value?.longitude ?? 0.0);
-          // int time = minutesUsingDistance(distance: distance);
-          // timeInMinutes = (time >= 1) ? time : 1;
           pickUpTime.value = timeInMinutes.toInt();
           showPickUpMarker(timeInMinutes);
         }
@@ -1170,8 +949,6 @@ class TaxiControllerNew extends GetxController
         commonPlaceController.pickUpLocation.value.split(RegExp(r" - |,"))[0];
     printLogs(
         "Hii ravi taxi pick up location list ${commonPlaceController.pickUpLatLng.value}");
-    // String secondIndex =
-    //     commonPlaceController.pickUpLocation.value.split(RegExp(r" - |,"))[1];
     if (pickUpDropMarkers.isNotEmpty) {
       pickUpDropMarkers[0] = Marker(
           zIndex: 1.2,
@@ -1189,12 +966,7 @@ class TaxiControllerNew extends GetxController
                   location: pickupCity,
                   time: "Pick-up in ${timeInMinutes.toStringAsFixed(1)} min",
                   textColor: AppColor.kPrimaryTextColor.value,
-                  backgroundColor: AppColor.kStatusBarPrimaryColor
-                      .value)) /*getWidgetMarker(
-              widget: pickDistanceMarker(
-                  text: "${timeInMinutes.toStringAsFixed(1)}",
-                  color: AppColor.kPrimaryColor.value))*/
-          );
+                  backgroundColor: AppColor.kStatusBarPrimaryColor.value)));
     } else {
       pickUpDropMarkers.add(
         Marker(
@@ -1213,11 +985,7 @@ class TaxiControllerNew extends GetxController
                     location: pickupCity,
                     time: "Pick-up in ${timeInMinutes.toStringAsFixed(1)} min",
                     textColor: AppColor.kPrimaryTextColor.value,
-                    backgroundColor: AppColor.kStatusBarPrimaryColor
-                        .value) /*pickDistanceMarker(
-                    text: "$timeInMinutes",
-                    color: AppColor.kPrimaryColor.value)*/
-                )),
+                    backgroundColor: AppColor.kStatusBarPrimaryColor.value))),
       );
     }
     pickUpDropMarkers.refresh();
@@ -1271,7 +1039,6 @@ class TaxiControllerNew extends GetxController
           destinationController.draggableScrollableController =
               DraggableScrollableController();
         }
-        // Get.toNamed(AppRoutes.destinationPage);
         final result = await Get.toNamed(AppRoutes.destinationPage);
 
         // Check if the result is not null and update the state
@@ -1290,12 +1057,10 @@ class TaxiControllerNew extends GetxController
       } else {
         Get.back();
       }
-      // Safely handle status
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _googleMapLocationDataUpdating(pageType);
       });
     } catch (e) {
-      // Handle navigation error if needed
       printLogs('Navigation error: $e');
     }
   }
@@ -1308,9 +1073,7 @@ class TaxiControllerNew extends GetxController
     calculateArrivalTime();
     printLogs(
         "Hii ravi taxi pickup latLng is ${commonPlaceController.pickUpLatLng.value}");
-    // Update only the pickup marker instead of clearing all markers
     if (status == "1") {
-      // Check if the pickup marker exists and update it or add it
       if (pickUpDropMarkers.isNotEmpty) {
         pickUpDropMarkers[0] = Marker(
           onTap: () {
@@ -1330,7 +1093,6 @@ class TaxiControllerNew extends GetxController
                   backgroundColor: AppColor.kStatusBarPrimaryColor.value)),
         );
       } else {
-        // If no markers are present, just add the pickup marker
         pickUpDropMarkers.add(Marker(
           onTap: () {
             _moveToGoogleLocationPicker(type: GetPoistion.pin, pageType: 1);
@@ -1428,8 +1190,6 @@ class TaxiControllerNew extends GetxController
     String dropCity = commonPlaceController.dropLocation.value.split(" - ")[0];
     String pickupCity =
         commonPlaceController.pickUpLocation.value.split(RegExp(r" - |,"))[0];
-    // String pickupCityName =
-    //     commonPlaceController.pickUpLocation.value.split(RegExp(r" - |,"))[1];
     if (pickUpDropMarkers.isNotEmpty) {
       pickUpDropMarkers[0] = Marker(
           onTap: () {
@@ -1469,43 +1229,178 @@ class TaxiControllerNew extends GetxController
                     backgroundColor: AppColor.kStatusBarPrimaryColor.value))),
       );
     }
-
     pickUpDropMarkers.refresh();
   }
 
-  String? validatePhoneNumber(String? value) {
-    if (value == '') {
-      return 'Please enter mobile number';
-    }
-    if (!GetUtils.isPhoneNumber(value.toString())) {
-      return 'Please enter valid mobile number';
-    }
-    if (double.tryParse(value.toString()) == null) {
-      return 'Invalid number format';
-    }
-    return null;
+  onBookTaxiClicked({int type = 0, int? hourly = 0}) {
+    getUserInfo();
+    showButtonLoader.value = true;
+    _cancelNearestDriversListTimer();
+    _callSaveBookingApi();
   }
 
-  bool? submit() {
-    final isValid = guestFormKey.currentState?.validate();
-    // if (!isValid!) {
-    //   return;
-    // }
-    return isValid;
+  void _callSaveBookingApi() async {
+    await getUserInfo();
+    showButtonLoader.value = true;
+    printLogs("SaveBooking Polyline: ${overViewPolyLine.value}");
+    CarModelData? matchedModel = carModelList.firstWhere(
+        (coreModel) => coreModel.modelId == selectedCarModel.value.modelId);
+    num approximateFare = matchedModel.approximateFare ?? 0.0;
+    saveBookingApi(
+      SaveBookingRequestData(
+          name: GlobalUtils.name,
+          email: GlobalUtils.email,
+          type: 0,
+          phone: GlobalUtils.phone,
+          approxDistance: approximateDistance.value.toString(),
+          approxDuration: approximateTime.value,
+          approxTripFare: isPromoApplied.value
+              ? tripFare.value.toString()
+              : approximateFare.toString(),
+          cityname: "",
+          distanceAway: 0,
+          routePolyline: overViewPolyLine.value,
+          dropLatitude: commonPlaceController.dropLatLng.value.latitude,
+          dropLongitude: commonPlaceController.dropLatLng.value.longitude,
+          dropMakani: "",
+          dropNotes: "",
+          dropplace: commonPlaceController.dropLocation.value,
+          favDriverBookingType: 0,
+          userId: GlobalUtils.passUserId,
+          friendId2: 0,
+          friendId3: 0,
+          friendId4: 0,
+          friendPercentage1: 100,
+          friendPercentage2: 0,
+          friendPercentage3: 0,
+          friendPercentage4: 0,
+          guestName: "",
+          guestPhone: "",
+          isGuestBooking: "0",
+          latitude: commonPlaceController.pickUpLatLng.value.latitude,
+          longitude: commonPlaceController.pickUpLatLng.value.longitude,
+          modelWaitingFare: "${selectedCarModel.value.waitingFare}",
+          motorModel: '${selectedCarModel.value.modelId}',
+          notes: "",
+          nowAfter: isLaterBooking ? "1" : "0",
+          passengerAppVersion: appVersion.value,
+          passengerPaymentOption: paymentType.value,
+          paymentMode: paymentType.value.toString(),
+          pickupplace: commonPlaceController.pickUpLocation.value,
+          pickupMakani: '',
+          pickupNotes: '',
+          pickupTime:
+              isLaterBooking ? laterBookingDateTime : getFormattedTimeNow(),
+          promoCode: appliedPromoCode.value,
+          requestType: '1',
+          subLogid: '',
+          countryCode: GlobalUtils.countryCode,
+          priceHike: priceHike.value.toString(),
+          packageType: "",
+          packageId: "",
+          oneTimeDiscountApplied: 0,
+          oneTimeDiscountPercentage: dashboardController
+                  .getApiData.value.rslGetCore?[0].oneTimeDiscountPercentage
+                  ?.toInt() ??
+              0),
+    ).then((response) {
+      switch (response.status) {
+        case 1:
+          showButtonLoader.value = false;
+          if (isLaterBooking) {
+            _refreshToBookingStateOne();
+            showAppDialog(
+              message: '${response.message}',
+              confirm: defaultAlertConfirm(
+                onPressed: () {
+                  tripId = '${response.detail?.passengerTripId}';
+                  commonPlaceController.tripId.value = tripId ?? "";
+                  GetStorageController().saveTripId(
+                      tripid: "${response.detail?.passengerTripId}");
+                  Get.toNamed(AppRoutes.dashboardPage);
+                  _refreshToBookingStateOne();
+                },
+              ),
+            );
+          } else {
+            tripStatus.value = response.message ?? "";
+            tripStatus.refresh();
+            bookingState.value = BookingState.kBookingStateTwo;
+            tripId = '${response.detail?.passengerTripId}';
+            commonPlaceController.tripId.value = tripId ?? "";
+            GetStorageController().saveTripId(tripid: "$tripId");
+            bookingState.value = BookingState.kBookingStateTwo;
+            _scheduleTripUpdateApiTimer();
+          }
+          break;
+        default:
+          showButtonLoader.value = false;
+          _scheduleNearestDriversListApiTimer();
+          Get.snackbar('Error', '${response.message}',
+              backgroundColor: AppColor.kGetSnackBarColor.value);
+      }
+      // showButtonLoader.value = false;
+    }).onError((error, stackTrace) {
+      showButtonLoader.value = false;
+      _refreshToBookingStateOne();
+      printLogs("TAXI ERROR : $error");
+      Get.snackbar('Error', 'Something went wrong.',
+          backgroundColor: AppColor.kGetSnackBarColor.value);
+    });
   }
 
-  RxDouble firstSheetHeight = 0.45.obs;
-  RxBool isFirstSheetExpanded = false.obs;
-  RxBool isSecondSheetExpanded = false.obs;
-  RxDouble secondSheetSize = 0.13.obs;
-  double maxOffset = 1000.0;
-  final ValueNotifier<double> draggableSheetHeight = ValueNotifier(0.45);
-  late DraggableScrollableController draggableScrollableController;
-  late DraggableScrollableController bottomDraggableScrollableController;
-  final ValueNotifier<bool> isSheetFullyExpanded = ValueNotifier(false);
-  bool isSecondSheetListenerAdded = false;
-  bool isListenerAdded = false;
-  var isControllerAttached = false.obs;
+  _scheduleTripUpdateApiTimer() {
+    _cancelTripUpdateApiTimer();
+    _tripUpdateTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      _callGetTripUpdateTimerApi();
+    });
+  }
+
+  void _callGetTripUpdateTimerApi() async {
+    getTripUpdateApi(
+      GetTripUpdateRequestData(
+        userId: GlobalUtils.passUserId,
+        requestType: '1',
+        tripId: tripId,
+        countryCode: GlobalUtils.countryCode,
+        email: GlobalUtils.email,
+        name: GlobalUtils.name,
+        phone: GlobalUtils.phone,
+        type: 0,
+      ),
+    ).then((response) {
+      switch (response.status) {
+        case 1: //Booking confirmation - TripId should be saved
+          tripStatus.value = response.message ?? '';
+          tripStatus.refresh();
+          _cancelNearestDriversListTimer();
+          GetStorageController()
+              .saveTripId(tripid: commonPlaceController.tripId.value);
+          _refreshToBookingStateOne();
+          Get.toNamed(AppRoutes.trackingPage);
+          break;
+        case 2: //Driver not assigned - all are busy
+          tripStatus.value = response.message ?? '';
+          tripStatus.refresh();
+          break;
+        case 7: //Trip already cancelled.
+
+          Get.snackbar('Alert', '${response.message}',
+              backgroundColor: AppColor.kGetSnackBarColor.value);
+          break;
+        case 6:
+          commonPlaceController.tripId.value = "$tripId";
+          commonPlaceController.tripId.refresh();
+          timerMessage = response.message ?? "";
+          break;
+        default:
+          Get.snackbar('Alert', '${response.message}',
+              backgroundColor: AppColor.kGetSnackBarColor.value);
+      }
+    }).onError((error, stackTrace) {
+      printLogs("Error in getUpdateDetailAPI : $error");
+    });
+  }
 
   // Method to update the second sheet height based on scroll offset
   void updateSheetHeight(double offset) {
@@ -1514,5 +1409,35 @@ class TaxiControllerNew extends GetxController
     secondSheetSize.value =
         newSize.clamp(0.01, 0.13); // Keep size in valid range
     printLogs("Hii updateSheetHeight is ${secondSheetSize.value}");
+  }
+
+  void updateImage() {
+    final getCoreModelList = dashboardController
+        .getApiData.value.rslGetCore?.firstOrNull?.modelDetails;
+    for (int i = 0; i < (getCoreModelList?.length ?? 0); i++) {
+      for (int j = 0; j < carModelList.length; j++) {
+        if (carModelList[j].modelId == getCoreModelList?[i].modelId &&
+            carModelList[j].modelId != null) {
+          carModelList[j].focusImage = getCoreModelList?[i].focusImage;
+          carModelList[j].unfocusImage = getCoreModelList?[i].unfocusImage;
+          carModelList[j].modelName = getCoreModelList?[i].modelName;
+          carModelList[j].modelSize = getCoreModelList?[i].modelSize;
+          carModelList[j].description = getCoreModelList?[i].description;
+        }
+      }
+    }
+    carModelList.refresh();
+  }
+
+  void _refreshToBookingStateOne() {
+    availableCarCount.value = 0;
+    availableDriverDetail.value = null;
+    showButtonLoader.value = false;
+    showCancelBookingLoader.value = false;
+    commonPlaceController.laterBookingDateTime.value = '';
+    tripId = '';
+    bookingState.value = BookingState.kBookingStateOne;
+    _scheduleNearestDriversListApiTimer();
+    _cancelTripUpdateApiTimer();
   }
 }

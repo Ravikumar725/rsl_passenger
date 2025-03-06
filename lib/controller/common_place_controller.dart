@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import '../network/services.dart';
+import '../taxi/data/booking_details_api_data.dart';
+import '../taxi/data/nearest_drivers_list_api_data.dart';
+import '../widget/utils/enums.dart';
 
 class CommonPlaceController extends GetxController {
   var currentAddress = ''.obs;
@@ -29,6 +32,10 @@ class CommonPlaceController extends GetxController {
   RxBool isQuickChatClicked = false.obs;
   RxBool isCarClicked = false.obs;
   var pageType = 1.obs;
+
+  Rx<BookingDetailsResponseData>? BookingDetailResponse =
+      BookingDetailsResponseData().obs;
+  RxList<CarModelData> carModelList = <CarModelData>[].obs;
 
   void updateTextForRating(double rating) {
     ratingText.value = getTextForRating(rating);
@@ -97,4 +104,3 @@ class CommonPlaceController extends GetxController {
     }
   }
 }
-enum GetPoistion { pin, drop }

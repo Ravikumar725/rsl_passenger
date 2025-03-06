@@ -9,7 +9,8 @@ import '../network/services.dart';
 import '../taxi/controller/city_selection_controller.dart';
 import '../taxi/controller/destination_controller.dart';
 import '../taxi/controller/saved_location_controller.dart';
-import '../taxi/controller/taxi_controller_new.dart';
+import '../taxi/controller/taxi_controller.dart';
+import '../taxi/controller/tracking_controller.dart';
 
 class AppBindings extends Bindings {
   @override
@@ -23,6 +24,7 @@ class AppBindings extends Bindings {
     Get.lazyPut<CitySelectionController>(() => CitySelectionController());
     Get.lazyPut<SaveLocationController>(() => SaveLocationController());
     Get.lazyPut<ConfirmPickupController>(() => ConfirmPickupController());
-    Get.lazyPut<TaxiControllerNew>(() => TaxiControllerNew());
+    Get.lazyPut<TaxiController>(() => TaxiController());
+    Get.lazyPut<TrackingController>(() => TrackingController());
   }
 }

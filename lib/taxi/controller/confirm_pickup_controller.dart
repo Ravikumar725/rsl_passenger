@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geocoding/geocoding.dart';
@@ -8,13 +7,11 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rsl_passenger/routes/routes.dart';
 import 'package:rsl_passenger/taxi/controller/saved_location_controller.dart';
-import '../../widget/utils/app_info.dart';
 import '../../controller/common_place_controller.dart';
 import '../../controller/place_search_page_controller.dart';
 import '../../dashboard/controller/dashboard_page_controller.dart';
-import '../../dashboard/data/get_core_api_data.dart';
 import '../../network/services.dart';
-import '../widget/custom_map_marker.dart';
+import '../../widget/utils/enums.dart';
 import 'city_selection_controller.dart';
 import 'destination_controller.dart';
 
@@ -28,6 +25,7 @@ class ConfirmPickupController extends GetxController {
   final citySelectionController = Get.put(CitySelectionController());
   final dashboardController = Get.find<DashBoardController>();
   final destinationController = Get.find<DestinationController>();
+  final placeSearchController = Get.find<PlaceSearchPageController>();
 
   var isAddressFetching = false.obs;
   GoogleMapController? mapController;
@@ -36,8 +34,10 @@ class ConfirmPickupController extends GetxController {
   var getAddress = ''.obs;
   var pickupEdit = 1.obs;
   Rx<LatLng> target = const LatLng(0.0, 0.0).obs;
+
   String get laterBookingDateTime =>
       commonPlaceController.laterBookingDateTime.value;
+
   bool get isLaterBooking => laterBookingDateTime.isNotEmpty;
 
   RxBool isOutsideUAE = false.obs;
@@ -79,13 +79,19 @@ class ConfirmPickupController extends GetxController {
         debugPrint("DraggableScrollableControllerPick is NOT attached yet!");
       }
     });
-    printLogs(
-        "Hii confirm page pick up latLng is ${commonPlaceController.pickUpLatLng.value}");
-    // getAddressFromLatLng(commonPlaceController.pickUpLatLng.value);
     isSheetFullyExpandedPick.value = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       getDefaultAddressAndLatLng();
       _enableHeaderAndFooterWidget();
+    });
+    ever(isSheetFullyExpandedPick, (callback) async {
+      if (isSheetFullyExpandedPick.value) {
+        await Future.delayed(const Duration(seconds: 1));
+        placeSearchController.pickFocusNode.value.requestFocus();
+      } else {
+        placeSearchController.pickController.text = '';
+        placeSearchController.pickFocusNode.value.unfocus();
+      }
     });
     getAddressFromLatLng(commonPlaceController.pickUpLatLng.value);
     super.onInit();
@@ -134,12 +140,8 @@ class ConfirmPickupController extends GetxController {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Test if location services are enabled.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // Location services are not enabled don't continue
-      // accessing the position and request users of the
-      // App to enable the location services.
       return Future.error('Location services are disabled.');
     }
 
@@ -147,23 +149,15 @@ class ConfirmPickupController extends GetxController {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        // Permissions are denied, next time you could try
-        // requesting permissions again (this is also where
-        // Android's shouldShowRequestPermissionRationale
-        // returned true. According to Android guidelines
-        // your App should show an explanatory UI now.
         return Future.error('Location permissions are denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, handle appropriately.
       return Future.error(
           'Location permissions are permanently denied, we cannot request permissions.');
     }
 
-    // When we reach here, permissions are granted and we can
-    // continue accessing the position of the device.
     isAddressFetching.value = true;
     return await Geolocator.getCurrentPosition(
         locationSettings:
@@ -171,10 +165,8 @@ class ConfirmPickupController extends GetxController {
   }
 
   void onPickUpOnPress() {
-    final placeSearchPageController = Get.find<PlaceSearchPageController>(); // ✅ Use existing instance
-
+    final placeSearchPageController = Get.find<PlaceSearchPageController>();
     destinationController.isDropEdit.value = false;
-    // Get.back();
     printLogs('Hii ravi taxi Current Route: ${Get.currentRoute}');
     printLogs('Hii ravi taxi Previous Route: ${Get.previousRoute}');
     if (Get.previousRoute == AppRoutes.pickUpScreen) {
@@ -182,10 +174,10 @@ class ConfirmPickupController extends GetxController {
     } else {
       Get.back();
     }
-    // commonPlaceController.dropLocation.value = '';
-    // commonPlaceController.dropLatLng.value = const LatLng(0.0, 0.0);
-    commonPlaceController.pickUpLocation.value = commonPlaceController.currentAddress.value;
-    commonPlaceController.pickUpLatLng.value = commonPlaceController.currentLatLng.value;
+    commonPlaceController.dropLocation.value =
+        commonPlaceController.currentAddress.value;
+    commonPlaceController.dropLatLng.value =
+        commonPlaceController.currentLatLng.value;
     placeSearchPageController.destinationController.text = '';
     placeSearchPageController.pickController.text = '';
     commonPlaceController.laterBookingDateTime.value = "";
@@ -202,13 +194,14 @@ class ConfirmPickupController extends GetxController {
           curve: Curves.easeInOut,
         );
 
-        // Delay for height correction if necessary
         Future.delayed(const Duration(milliseconds: 100), () {
-          double currentSize = destinationController.draggableScrollableController.size;
+          double currentSize =
+              destinationController.draggableScrollableController.size;
 
-          if (currentSize == 1.0 || currentSize == 0.9) {
+          if (currentSize == 1.0) {
             destinationController.isMapDragged.value = false;
-            if (destinationController.draggableScrollableController.isAttached) {
+            if (destinationController
+                .draggableScrollableController.isAttached) {
               destinationController.draggableScrollableController.animateTo(
                 0.5,
                 duration: const Duration(milliseconds: 300),
@@ -217,14 +210,11 @@ class ConfirmPickupController extends GetxController {
             }
           }
         });
-      } else {
-        print("DraggableScrollableController is NOT attached!");
-      }
+      } else {}
     });
   }
 
   initialCameraPosition({GetPoistion? getPoistion}) {
-    // getAddressFromLatLng(commonPlaceController.pickUpLatLng.value);
     return CameraPosition(
       target: commonPlaceController.pickUpLatLng.value,
       zoom: 15,
@@ -240,9 +230,6 @@ class ConfirmPickupController extends GetxController {
 
   getAddressFromLatLng(LatLng newLatLng) async {
     try {
-      List<String> allowed = dashboardController
-              .getApiData.value.rslGetCore?.first.availablePickupLocations ??
-          [];
       // Fetch place information using coordinates
       List<Placemark> placeMarks = await placemarkFromCoordinates(
           newLatLng.latitude, newLatLng.longitude);
@@ -251,54 +238,14 @@ class ConfirmPickupController extends GetxController {
       final placeMark = placeMarks.first;
       printLogs("Location details: $placeMark ** ${placeMark.locality}");
 
-      // Allowed locations
-      List<String> allowedCities = dashboardController
-              .getApiData.value.rslGetCore?.first.availablePickupLocations ??
-          [];
-      List<String> allowedAdministrativeAreas = dashboardController
-              .getApiData.value.rslGetCore?.first.availablePickupLocations ??
-          [];
-      List<String> allowedSubAdministrativeAreas = dashboardController
-              .getApiData.value.rslGetCore?.first.availablePickupLocations ??
-          [];
+      final title = placeMark.name ?? "Unknown Location";
+      final subtitle =
+          "${placeMark.locality}, ${placeMark.administrativeArea}, ${placeMark.country}";
 
-      // Normalize values for case-insensitive matching
-      String locality = placeMark.locality?.trim().toLowerCase() ?? "";
-      String administrativeArea =
-          placeMark.administrativeArea?.trim().toLowerCase() ?? "";
-      String subAdministrativeArea =
-          placeMark.subAdministrativeArea?.trim().toLowerCase() ?? "";
-
-      bool isAllowedLocation = allowedCities
-              .any((city) => city.toLowerCase() == locality) ||
-          allowedAdministrativeAreas
-              .any((area) => administrativeArea.contains(area.toLowerCase())) ||
-          allowedSubAdministrativeAreas.any(
-              (area) => subAdministrativeArea.contains(area.toLowerCase()));
-
-      /*if (!isAllowedLocation) {
-        // Location is outside allowed cities for pickup
-        final latLngAddress =
-            "[${newLatLng.latitude.toStringAsFixed(4)}, ${newLatLng.longitude.toStringAsFixed(4)}]";
-        // isOutsideUAE.value = true;
-        isOutsideUAE.refresh();
-        printLogs(
-            "Outside pickup location: ${commonPlaceController.getPosition?.value} ** ${isOutsideUAE.value}");
-
-        // Update pickup location address
-        commonPlaceController.pickUpLocation.value = latLngAddress;
-        commonPlaceController.pickUpSubtitle.value = "";
-      } else {*/
-        // Location is inside allowed cities for pickup
-        // isOutsideUAE.value = false;
-        final title = placeMark.name ?? "Unknown Location";
-        final subtitle =
-            "${placeMark.locality}, ${placeMark.administrativeArea}, ${placeMark.country}";
-
-        commonPlaceController.pickUpLocation.value = title;
-        commonPlaceController.pickUpSubtitle.value = subtitle;
-        commonPlaceController.pickUpLocation.refresh();
-        commonPlaceController.pickUpSubtitle.refresh();
+      commonPlaceController.pickUpLocation.value = title;
+      commonPlaceController.pickUpSubtitle.value = subtitle;
+      commonPlaceController.pickUpLocation.refresh();
+      commonPlaceController.pickUpSubtitle.refresh();
       // }
 
       // Show address or coordinates based on validity
@@ -321,7 +268,6 @@ class ConfirmPickupController extends GetxController {
   }
 
   void onCameraIdle() {
-    // checkInsidePolygonOrNot();
     _enableHeaderAndFooterWidget();
   }
 
@@ -337,44 +283,6 @@ class ConfirmPickupController extends GetxController {
     if (!showPolygon.value) {
       mapLocationLoader.value = true;
       getAddressFromLatLng(target);
-    }
-  }
-
-  void _addMarkers(List<TerminalList> terminalList, latLng) async {
-    for (int i = 0; i < terminalList.length; i++) {
-      /* printLogs(
-          "hi marker ${latLng.latitude.toStringAsFixed(3)} , ${terminalList[i].latitude!.toStringAsFixed(3)}, ${latLng.longitude.toStringAsFixed(3)},${terminalList[i].longitude!.toStringAsFixed(3)} ");
-      */
-      if (latLng.latitude.toStringAsFixed(3) ==
-              terminalList[i].latitude!.toStringAsFixed(3) &&
-          latLng.longitude.toStringAsFixed(3) ==
-              terminalList[i].longitude!.toStringAsFixed(3)) {
-        markers.add(
-          Marker(
-            markerId: MarkerId('marker_$i'),
-            position:
-                LatLng(terminalList[i].latitude!, terminalList[i].longitude!),
-            icon: await getWidgetMarker(
-              widget: polygonMarker(text: terminalList[i].address, type: 0),
-            ),
-            // BitmapDescriptor.defaultMarker,
-            infoWindow: InfoWindow(title: "${terminalList[i].address}"),
-          ),
-        );
-      } else {
-        markers.add(
-          Marker(
-            markerId: MarkerId('marker_$i'),
-            position:
-                LatLng(terminalList[i].latitude!, terminalList[i].longitude!),
-            icon: await getWidgetMarker(
-              widget: polygonMarker(text: terminalList[i].address, type: 1),
-            ),
-            // BitmapDescriptor.defaultMarker,
-            infoWindow: InfoWindow(title: "${terminalList[i].address}"),
-          ),
-        );
-      }
     }
   }
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../../controller/common_place_controller.dart';
 import '../../dashboard/getx_storage.dart';
 import '../../dashboard/data/data.dart';

@@ -11,6 +11,7 @@ import 'package:rsl_passenger/routes/routes.dart';
 
 import '../widget/utils/app_info.dart';
 import '../network/services.dart';
+import '../widget/utils/enums.dart';
 import 'common_place_controller.dart';
 
 class PlaceSearchPageController extends GetxController {
@@ -159,13 +160,13 @@ class PlaceSearchPageController extends GetxController {
         if (searchType == 1) {
           printLogs("Hii Ravi kumar Taxi search type is $searchType");
           commonPlaceController.pickUpLatLng.value = pickUpLatLng.value;
-          Get.toNamed(AppRoutes.taxiHomePageNew);
+          Get.toNamed(AppRoutes.taxiHomePage);
         } else {
           commonPlaceController.pickUpLatLng.value =
               dashboardController.pickUpLatLng.value;
           if (isForceDropEdit.value) {
             printLogs("Hii Ravi kumar Taxi search type 2 home Page");
-            Get.toNamed(AppRoutes.taxiHomePageNew);
+            Get.toNamed(AppRoutes.taxiHomePage);
           } else {
             printLogs("Hii Ravi kumar Taxi search type 2 pickup page");
             Get.toNamed(AppRoutes.pickUpScreen);

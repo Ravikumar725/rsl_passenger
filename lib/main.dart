@@ -3,15 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:rsl_passenger/routes/routes.dart';
 import 'binding/bindings.dart';
-import 'dashboard/controller/dashboard_page_controller.dart';
 import 'dashboard/dashboard_page.dart';
-import 'dashboard/getx_storage.dart';
-import 'network/services.dart';
 
 void main() {
-  Get.put(ApiProvider());
-  Get.put(DashBoardController());
-  Get.put(GetStorageController());
   runApp(const MyApp());
 }
 
@@ -22,7 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      initialRoute: "/",
+      initialRoute: "/dashboardPage",
       initialBinding: AppBindings(),
       getPages: pages,
       title: 'Flutter Demo',

@@ -153,6 +153,8 @@ class CarModelData {
   bool? isPromoApplied = false;
   String? originalFare;
   String? fareRange;
+  String? focusImage;
+  String? unfocusImage;
 
   CarModelData({
     this.modelId,
@@ -196,6 +198,8 @@ class CarModelData {
     this.isPromoApplied,
     this.originalFare,
     this.fareRange,
+    this.focusImage,
+    this.unfocusImage
   });
 
   CarModelData.fromJson(Map<String, dynamic> json) {
