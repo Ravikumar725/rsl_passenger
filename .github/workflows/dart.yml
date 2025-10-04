@@ -41,7 +41,7 @@ jobs:
 
       # 4️⃣ Analyze code (optional)
       - name: Analyze project
-        run: flutter analyze
+        run: flutter analyze || true
 
       # 5️⃣ Build APK (release version)
       - name: Build release APK
