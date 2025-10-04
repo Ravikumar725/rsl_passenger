@@ -3,13 +3,14 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Dart
+name: Flutter Build APK
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:  # allows manual trigger from the Actions tab
 
 jobs:
   build:
@@ -21,11 +22,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Flutter
+      # 2️⃣ Setup Flutter (FIXED: use explicit version or channel)
+      # Option A: Use a fixed Flutter version (recommended for stability)
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'   # or specify: '3.24.3'
+          flutter-version: '3.7.2'
+
+      # Option B: (Alternative) use latest stable channel instead
+      # - name: Setup Flutter
+      #   uses: subosito/flutter-action@v2
+      #   with:
+      #     channel: 'stable'
 
       # 3️⃣ Get dependencies
       - name: Install dependencies
@@ -35,7 +43,7 @@ jobs:
       - name: Analyze project
         run: flutter analyze
 
-      # 5️⃣ Build APK (debug/release)
+      # 5️⃣ Build APK (release version)
       - name: Build release APK
         run: flutter build apk --release
 
